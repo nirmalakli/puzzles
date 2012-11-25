@@ -16,6 +16,11 @@ class Card(val suit: Suit, val faceValueOrig: String) {
   def < (other:Card) : Boolean = integerFaceValue < other.integerFaceValue 
   def > (other:Card) : Boolean = integerFaceValue > other.integerFaceValue 
   def == (other:Card) : Boolean = suit == other.suit && integerFaceValue == other.integerFaceValue
+  def compareTo(other: Card) : ComparisionResult = {
+    if( this == other) Equals
+    else if(this < other) Smaller
+    else Greater
+  }
   override def toString() : String = "Card[" + suit + ", " + faceValue + "]"
 }
 
@@ -86,17 +91,35 @@ case class Hand(val cards : List[Card]) {
 	    new OnePair(this)
     ) filter ( _.isHand)
   }
-  
-  def compareTo(other: Hand) : ComparisionResult = {
+
+  // Core method - compares 2 hands
+  def compareTo(other: Hand): ComparisionResult = {
     (types, other.types) match {
-      case (Nil, Nil) => Equals
+      case (Nil, Nil) => compareCardsByHighestValue(this.sortByFace.reverse, other.sortByFace.reverse)
       case (x, Nil) => Greater
       case (Nil, x) => Smaller
       case (x, y) => {
-        val handType : HandType = x head
-	    val otherHandType : HandType = y.head
-	    handType.compareTo(otherHandType)
+        val handType: HandType = x head
+        val otherHandType: HandType = y.head
+        val result = handType.compareTo(otherHandType)
+        if (result == Equals) {
+          compareCardsByHighestValue(this.sortByFace.reverse, other.sortByFace.reverse)
+        } else {
+          result
+        }
       }
+    }
+  }
+
+  def compareCardsByHighestValue(a: List[Card], b: List[Card]): ComparisionResult = {
+    if (!(a isEmpty) && !(b isEmpty)) {
+      val result = a.head.compareTo(b.head)
+      if (result == Equals)
+        compareCardsByHighestValue(a.tail, b.tail)
+      else
+        result
+    } else {
+      Equals
     }
   }
 }
@@ -129,11 +152,15 @@ trait HandType {
     if (type1 != type2)
       throw new RuntimeException("Can not compare Hand Types of different classes!")
     else true
-  } 
-  
+  }
+
   def compareTo(other: HandType): ComparisionResult = {
-    classEquals(other)
-    Equals
+    if (rankCompare(other) != Equals)
+      rankCompare(other)
+    else {
+      classEquals(other)
+      Equals
+    }
   }
   
 }
