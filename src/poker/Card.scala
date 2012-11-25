@@ -17,7 +17,6 @@ class Card(val suit: Suit, val faceValueOrig: String) {
   def > (other:Card) : Boolean = integerFaceValue > other.integerFaceValue 
   def == (other:Card) : Boolean = suit == other.suit && integerFaceValue == other.integerFaceValue
   override def toString() : String = "Card[" + suit + ", " + faceValue + "]"
-
 }
 
 trait Suit
@@ -25,6 +24,11 @@ case object Heart extends Suit
 case object Spade extends Suit
 case object Club extends Suit
 case object Diamond extends Suit
+
+trait ComparisionResult
+case object Smaller extends ComparisionResult
+case object Greater extends ComparisionResult
+case object Equals extends ComparisionResult
 
 case class Hand(val cards : List[Card]) {
   
@@ -84,7 +88,6 @@ case class Hand(val cards : List[Card]) {
   }
   
   def compareTo(other: Hand) : ComparisionResult = {
-    log(other)
     (types, other.types) match {
       case (Nil, Nil) => Equals
       case (x, Nil) => Greater
@@ -95,16 +98,7 @@ case class Hand(val cards : List[Card]) {
 	    handType.compareTo(otherHandType)
       }
     }
-    
   }
-  
-  def log(other: Hand) = {
-    println("Hand1 = " + this)
-    println("Hand1.types = " + types)
-    println("Hand2 = " + other)
-    println("Hand2.types = " + other.types)
-  }
-  
 }
 
 case class Kind(faceValue: String, repeat: Int) {
@@ -122,11 +116,13 @@ trait HandType {
   val hand: Hand
   def rank: Int
   def isHand: Boolean
+  
   def rankCompare(other: HandType): ComparisionResult = {
     if (rank == other.rank) Equals
     else if (rank < other.rank) Smaller
     else Greater
   }
+  
   def classEquals(other: HandType): Boolean = {
     val type1 = this.getClass
     val type2 = other.getClass
@@ -134,6 +130,7 @@ trait HandType {
       throw new RuntimeException("Can not compare Hand Types of different classes!")
     else true
   } 
+  
   def compareTo(other: HandType): ComparisionResult = {
     classEquals(other)
     Equals
@@ -141,8 +138,10 @@ trait HandType {
   
 }
 
+// Trait for Hand types like - FourOfAKind, ThreeOfAKind...
 trait HandTypeWithKind extends HandType {
   val kinds : List[Kind]
+  
   override def compareTo(other: HandType): ComparisionResult = {
     if (rankCompare(other) != Equals)
       rankCompare(other)
@@ -164,15 +163,8 @@ trait HandTypeWithKind extends HandType {
       }
       loop(kinds, hand2.kinds)
     }
-    
   }
 }
-
-sealed abstract class ComparisionResult
-case object Smaller extends ComparisionResult
-case object Greater extends ComparisionResult
-case object Equals extends ComparisionResult
-
 
 case class RoyalFlush(val hand : Hand) extends HandType {
   val rank = 1
@@ -184,7 +176,7 @@ case class StraightFlush(val hand : Hand) extends HandType {
   def isHand : Boolean = hand.sameSuit && hand.consecutiveCards
 }
 
-case class FourOfAKind(val hand: Hand) extends HandType with HandTypeWithKind {
+case class FourOfAKind(val hand: Hand) extends HandTypeWithKind {
   val rank = 3
   val kinds : List[Kind] = hand.kinds.filter(_.repeat == 4)
   val isHand: Boolean = !(kinds isEmpty)
